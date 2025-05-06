@@ -4,9 +4,9 @@ const {
   STRIPE_PUBLISHABLE_KEY,
   STRIPE_SECRET_KEY,
   STRIPE_PRICE_ID,
-  KEYRIX_PRODUCT_TOKEN,
-  KEYRIX_ACCOUNT_ID,
-  KEYRIX_POLICY_ID,
+  LICENSEGEN_PRODUCT_TOKEN,
+  LICENSEGEN_ACCOUNT_ID,
+  LICENSEGEN_POLICY_ID,
   PORT = 8080
 } = process.env
 
@@ -23,53 +23,53 @@ app.use(morgan('combined'))
 
 app.set('view engine', 'ejs')
 
-app.post("/keyrix-webhooks", async (req, res) => {
-  const { data: { id: keyrixEventId } } = req.body
+app.post("/licensegen-webhooks", async (req, res) => {
+  const { data: { id: licensegenEventId } } = req.body
 
   // Fetch the webhook to validate it and get its most up-to-date state
-  const keyrixWebhook = await fetch(`https://keyrix-api.focusapps.app/v1/accounts/${KEYRIX_ACCOUNT_ID}/webhook-events/${keyrixEventId}`, {
+  const licensegenWebhook = await fetch(`https://licensegen-api.focusapps.app/v1/accounts/${LICENSEGEN_ACCOUNT_ID}/webhook-events/${licensegenEventId}`, {
     method: "GET",
     headers: {
-      "Authorization": `Bearer ${KEYRIX_PRODUCT_TOKEN}`,
+      "Authorization": `Bearer ${LICENSEGEN_PRODUCT_TOKEN}`,
       "Accept": "application/vnd.api+json"
     }
   })
 
-  const { data: keyrixEvent, errors } = await keyrixWebhook.json()
+  const { data: licensegenEvent, errors } = await licensegenWebhook.json()
   if (errors) {
-    return res.sendStatus(200) // Event does not exist (wasn't sent from Keyrix)
+    return res.sendStatus(200) // Event does not exist (wasn't sent from LicenseGen)
   }
 
-  switch (keyrixEvent.attributes.event) {
-    // 1. Respond to user creation events within your Keyrix account. Here, we'll create
-    //    a new Stripe customer account for new Keyrix users.
+  switch (licensegenEvent.attributes.event) {
+    // 1. Respond to user creation events within your LicenseGen account. Here, we'll create
+    //    a new Stripe customer account for new LicenseGen users.
     case "user.created":
-      const { data: keyrixUser } = JSON.parse(keyrixEvent.attributes.payload)
+      const { data: licensegenUser } = JSON.parse(licensegenEvent.attributes.payload)
 
-      // Make sure our Keyrix user has a Stripe token, or else we can't charge them later on..
-      if (!keyrixUser.attributes.metadata.stripeToken) {
-        throw new Error(`User ${keyrixUser.id} does not have a Stripe token attached to their user account!`)
+      // Make sure our LicenseGen user has a Stripe token, or else we can't charge them later on..
+      if (!licensegenUser.attributes.metadata.stripeToken) {
+        throw new Error(`User ${licensegenUser.id} does not have a Stripe token attached to their user account!`)
       }
 
       // 2. Create a Stripe customer, making sure we use our Stripe token as their payment
       //    method of choice.
       const stripeCustomer = await stripe.customers.create({
-        description: `Customer for Keyrix user ${keyrixUser.attributes.email}`,
-        email: keyrixUser.attributes.email,
+        description: `Customer for LicenseGen user ${licensegenUser.attributes.email}`,
+        email: licensegenUser.attributes.email,
         // Source is a Stripe token obtained with Stripe.js during user creation and
         // temporarily stored in the user's metadata attribute.
-        source: keyrixUser.attributes.metadata.stripeToken,
-        // Store the user's Keyrix ID within the Stripe customer so that we can lookup
-        // a Stripe customer's Keyrix account.
-        metadata: { keyrixUserId: keyrixUser.id }
+        source: licensegenUser.attributes.metadata.stripeToken,
+        // Store the user's LicenseGen ID within the Stripe customer so that we can lookup
+        // a Stripe customer's LicenseGen account.
+        metadata: { licensegenUserId: licensegenUser.id }
       })
 
       // 3. Add the user's Stripe customer ID to the user's metadata attribute so that
       //    we can lookup their Stripe customer account when needed.
-      const update = await fetch(`https://keyrix-api.focusapps.app/v1/accounts/${KEYRIX_ACCOUNT_ID}/users/${keyrixUser.id}`, {
+      const update = await fetch(`https://licensegen-api.focusapps.app/v1/accounts/${LICENSEGEN_ACCOUNT_ID}/users/${licensegenUser.id}`, {
         method: "PATCH",
         headers: {
-          "Authorization": `Bearer ${KEYRIX_PRODUCT_TOKEN}`,
+          "Authorization": `Bearer ${LICENSEGEN_PRODUCT_TOKEN}`,
           "Content-Type": "application/vnd.api+json",
           "Accept": "application/vnd.api+json"
         },
@@ -88,12 +88,12 @@ app.post("/keyrix-webhooks", async (req, res) => {
         throw new Error(errors.map(e => e.detail).toString())
       }
 
-      // All is good! Stripe customer was successfully created for the new Keyrix
-      // user. Let Keyrix know the event was received successfully.
+      // All is good! Stripe customer was successfully created for the new LicenseGen
+      // user. Let LicenseGen know the event was received successfully.
       res.sendStatus(200)
       break
     default:
-      // For events we don't care about, let Keyrix know all is good.
+      // For events we don't care about, let LicenseGen know all is good.
       res.sendStatus(200)
   }
 })
@@ -103,14 +103,14 @@ app.post("/stripe-webhooks", async (req, res) => {
 
   switch (stripeEvent.type) {
     // 4. Respond to customer creation events within your Stripe account. Here, we'll
-    //    create a new Stripe subscription for the customer as well as a Keyrix license
-    //    for the Keyrix user that belongs to the Stripe customer.
+    //    create a new Stripe subscription for the customer as well as a LicenseGen license
+    //    for the LicenseGen user that belongs to the Stripe customer.
     case "customer.created":
       const { object: stripeCustomer } = stripeEvent.data
 
-      // Make sure our Stripe customer has a Keyrix user ID, or else we can't work with it.
-      if (!stripeCustomer.metadata.keyrixUserId) {
-        throw new Error(`Customer ${stripeCustomer.id} does not have a Keyrix user ID attached to their customer account!`)
+      // Make sure our Stripe customer has a LicenseGen user ID, or else we can't work with it.
+      if (!stripeCustomer.metadata.licensegenUserId) {
+        throw new Error(`Customer ${stripeCustomer.id} does not have a LicenseGen user ID attached to their customer account!`)
       }
 
       // 5. Create a subscription for the new Stripe customer. This will charge the
@@ -123,16 +123,16 @@ app.post("/stripe-webhooks", async (req, res) => {
         // Use an idempotency key so that we don't charge a customer more than one
         // time regardless of how many times this webhook is retried.
         // See: https://stripe.com/docs/api/node#idempotent_requests
-        idempotency_key: stripeCustomer.metadata.keyrixUserId
+        idempotency_key: stripeCustomer.metadata.licensegenUserId
       })
 
       // 6. Create a license for the new Stripe customer after we create a subscription
-      //    for them. We're pulling the Keyrix user's ID from the Stripe customer's
+      //    for them. We're pulling the LicenseGen user's ID from the Stripe customer's
       //    metadata attribute (we stored it there earler).
-      const keyrixLicense = await fetch(`https://keyrix-api.focusapps.app/v1/accounts/${KEYRIX_ACCOUNT_ID}/licenses`, {
+      const licensegenLicense = await fetch(`https://licensegen-api.focusapps.app/v1/accounts/${LICENSEGEN_ACCOUNT_ID}/licenses`, {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${KEYRIX_PRODUCT_TOKEN}`,
+          "Authorization": `Bearer ${LICENSEGEN_PRODUCT_TOKEN}`,
           "Content-Type": "application/vnd.api+json",
           "Accept": "application/vnd.api+json"
         },
@@ -144,17 +144,17 @@ app.post("/stripe-webhooks", async (req, res) => {
             },
             relationships: {
               policy: {
-                data: { type: "policies", id: KEYRIX_POLICY_ID }
+                data: { type: "policies", id: LICENSEGEN_POLICY_ID }
               },
               user: {
-                data: { type: "users", id: stripeCustomer.metadata.keyrixUserId }
+                data: { type: "users", id: stripeCustomer.metadata.licensegenUserId }
               }
             }
           }
         })
       })
 
-      const { data, errors } = await keyrixLicense.json()
+      const { data, errors } = await licensegenLicense.json()
       if (errors) {
         res.sendStatus(500)
 
@@ -165,7 +165,7 @@ app.post("/stripe-webhooks", async (req, res) => {
       }
 
       // All is good! License was successfully created for the new Stripe customer's
-      // Keyrix user account. Next up would be for us to email the license key to
+      // LicenseGen user account. Next up would be for us to email the license key to
       // our user's email using `stripeCustomer.email` or something similar.
 
       // Let Stripe know the event was received successfully.
@@ -180,7 +180,7 @@ app.post("/stripe-webhooks", async (req, res) => {
 app.get('/', async (req, res) => {
   res.render('index', {
     STRIPE_PUBLISHABLE_KEY,
-    KEYRIX_ACCOUNT_ID
+    LICENSEGEN_ACCOUNT_ID
   })
 })
 

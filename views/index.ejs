@@ -39,7 +39,7 @@
     <script src="https://checkout.stripe.com/checkout.js"></script>
     <script>
       const STRIPE_PUBLISHABLE_KEY = "pk_test_51R2v1l2cuJj7x5m2vJWbqh13qR0EAAai11QssZdOWl46Gayv1VgA37vUyoMKwKq7BwjUr3SjJWGZEXKje1nhotKS00k6rQTaUg"
-      const KEYRIX_ACCOUNT_ID = "be19695a-e5f4-453f-b96b-32c571bb2f6b"
+      const LICENSEGEN_ACCOUNT_ID = "be19695a-e5f4-453f-b96b-32c571bb2f6b"
 
       const register = document.getElementById("register")
       const handler = StripeCheckout.configure({
@@ -53,8 +53,8 @@
             metadata: { stripeToken } // Temporarily store this so our webhooks can do their thing
           }
 
-          // Create the Keyrix user
-          const response = await fetch(`https://keyrix-api.focusapps.app/v1/accounts/${KEYRIX_ACCOUNT_ID}/users`, {
+          // Create the LicenseGen user
+          const response = await fetch(`https://licensegen-api.focusapps.app/v1/accounts/${LICENSEGEN_ACCOUNT_ID}/users`, {
             method: "POST",
             headers: {
               "Content-Type": "application/vnd.api+json",
@@ -85,7 +85,7 @@
 
         handler.open({
           panelLabel: "Purchase Software",
-          name: "Keyrix"
+          name: "LicenseGen"
         })
       })
     </script>

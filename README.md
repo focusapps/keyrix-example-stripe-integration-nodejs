@@ -1,6 +1,6 @@
-# Example Keyrix + Stripe integration
+# Example LicenseGen + Stripe integration
 The following web app is written in Node.js and shows how to integrate
-[Keyrix](https://keyrix.focusapps.app) and [Stripe](https://stripe.com) together
+[LicenseGen](https://licensegen.focusapps.app) and [Stripe](https://stripe.com) together
 using webhooks. Much more could be done to automate e.g. license
 revocation when a subscription is canceled, etc.
 
@@ -8,7 +8,7 @@ revocation when a subscription is canceled, etc.
 > get you 90% of the way there. You may need to add additional logging,
 > error handling, as well as listening for additional webhook events.
 >
-> If you are looking for next.js example, just implement the `/keyrix-webhooks` api route in your app.
+> If you are looking for next.js example, just implement the `/licensegen-webhooks` api route in your app.
 
 ## Running the app
 
@@ -23,15 +23,15 @@ export STRIPE_SECRET_KEY="YOUR_STRIPE_SECRET_KEY"
 # The Stripe plan to subscribe new customers to
 export STRIPE_PRICE_ID="YOUR_STRIPE_PRICE_ID"
 
-# Keyrix product token (don't share this!)
-export KEYRIX_PRODUCT_TOKEN="YOUR_KEYRIX_PRODUCT_TOKEN"
+# LicenseGen product token (don't share this!)
+export LICENSEGEN_PRODUCT_TOKEN="YOUR_LICENSEGEN_PRODUCT_TOKEN"
 
-# Your Keyrix account ID
-export KEYRIX_ACCOUNT_ID="YOUR_KEYRIX_ACCOUNT_ID"
+# Your LicenseGen account ID
+export LICENSEGEN_ACCOUNT_ID="YOUR_LICENSEGEN_ACCOUNT_ID"
 
-# The Keyrix policy to use when creating licenses for new users
+# The LicenseGen policy to use when creating licenses for new users
 # after they successfully subscribe to a plan
-export KEYRIX_POLICY_ID="YOUR_KEYRIX_POLICY_ID"
+export LICENSEGEN_POLICY_ID="YOUR_LICENSEGEN_POLICY_ID"
 ```
 
 You can either run each line above within your terminal session before
@@ -60,7 +60,7 @@ local development server:
 ngrok http 8080
 ```
 
-Next up, add the generated `ngrok` URL to your Stripe and Keyrix accounts to
+Next up, add the generated `ngrok` URL to your Stripe and LicenseGen accounts to
 listen for webhooks.
 
 1. **Stripe:** add `https://{YOUR_NGROK_URL}/stripe-webhooks` to https://dashboard.stripe.com/account/webhooks
@@ -74,7 +74,7 @@ you should add these event types depending on whether one-time or recurring:
 - `customer.subscription.updated`
 - `customer.subscription.deleted`
 
-1. **Keyrix:** add `https://{YOUR_NGROK_URL}/keyrix-webhooks` to https://keyrix-admin.focusapps.app/webhook-endpoints
+1. **LicenseGen:** add `https://{YOUR_NGROK_URL}/licensegen-webhooks` to https://licensegen-admin.focusapps.app/webhook-endpoints
 
 you should add these event types:
 
@@ -97,10 +97,10 @@ issues.
 
 ### Protected account
 
-**Please note that this example requires that your Keyrix account is
+**Please note that this example requires that your LicenseGen account is
 set to unprotected**, because this example handles user creation
 on the front-end. You can update this setting on your [account's
-settings page](https://keyrix-admin.focusapps.app/settings). If you would prefer
+settings page](https://licensegen-admin.focusapps.app/settings). If you would prefer
 to keep your account protected, the logic for user creation would
 need to be moved to a server-side URL.
 
@@ -108,15 +108,15 @@ need to be moved to a server-side URL.
 
 Here's a few things to double check when a problem arises:
 
-1. Make sure you're using the correct account ID (find yours [here](https://keyrix-admin.focusapps.app/settings))
+1. Make sure you're using the correct account ID (find yours [here](https://licensegen-admin.focusapps.app/settings))
 1. Make sure you're using a product token or admin token (the token should start with `prod-` or `admi-`)
 1. Make sure you're using the correct policy ID (it should be a UUID)
 1. Make sure that your Stripe environment variables are correct
 1. Make sure all dependencies have been installed via `yarn install`
-1. Make sure you have correctly configured webhooks for both Keyrix _and_ Stripe
+1. Make sure you have correctly configured webhooks for both LicenseGen _and_ Stripe
 1. Make sure that the webhook URL is accessible from the public internet via `ngrok`
 
 ## Questions?
 
-Reach out at [keyrix@focusapps.app](mailto:keyrix@focusapps.app) if you have any
+Reach out at [licensegen@focusapps.app](mailto:licensegen@focusapps.app) if you have any
 questions or concerns!
